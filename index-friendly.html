@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b3b2e">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>SmartHandle</title>
+<style>
+:root{--bg:#fffaf1;--panel:#ffffff;--panel2:#f4fbf5;--gold:#ffd37a;--text:#24332b;--muted:#6f7d74}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(#eaf8ee,#fffaf1 36%);color:var(--text);min-height:100vh}
+.wrap{max-width:780px;margin:auto;padding:22px 16px 90px}
+header{display:flex;gap:14px;align-items:center;margin-bottom:20px}
+.logo{width:66px;height:66px;border-radius:18px;overflow:hidden;border:1px solid rgba(227,194,108,.35)} .logo img{width:100%;height:100%;object-fit:cover}
+h1{margin:0;font-size:34px}.sub{color:var(--muted);margin-top:4px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0}
+.tab{border:1px solid #d8eadc;background:#ffffff;color:#315c43;padding:12px 6px;border-radius:14px;font-weight:700}.tab.active{background:var(--gold);color:#4a3a12}
+.search{width:100%;background:#ffffff;border:1px solid #cfe3d4;color:#24332b;padding:13px 14px;border-radius:14px;font-size:16px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));box-shadow:0 6px 18px rgba(73,110,84,.08);border:1px solid #d8eadc;border-radius:18px;padding:14px;margin:10px 0}
+.row{display:flex;gap:12px;align-items:center}.pic{width:74px;height:74px;border-radius:14px;object-fit:cover;background:#f3f7f4}.grow{flex:1}.name{font-size:20px;font-weight:800}.meta{color:var(--muted);font-size:14px}.buy{color:var(--gold);font-weight:800;margin-top:4px}
+.controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.btn{border:0;border-radius:12px;padding:9px 12px;font-weight:800;background:#dff1e4;color:#28543d}.btn.gold{background:var(--gold);color:#4a3a12}.btn.red{background:#f7d8d5;color:#7c2c27}
+.fab{position:fixed;right:22px;bottom:24px;width:62px;height:62px;border-radius:50%;border:0;background:var(--gold);font-size:38px}
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:20}.modal.show{display:flex}.sheet{width:100%;max-width:780px;margin:auto;background:#fffdf7;border-radius:24px 24px 0 0;padding:20px 16px 28px;max-height:92vh;overflow:auto}
+label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,select,textarea{width:100%;background:#f3f7f4;border:1px solid #cfe3d4;color:#24332b;border-radius:12px;padding:12px;font-size:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}.preview{width:110px;height:110px;object-fit:cover;border-radius:14px;margin-top:8px}
+.gear{position:fixed;left:22px;bottom:24px;width:54px;height:54px;border-radius:50%;border:1px solid rgba(227,194,108,.35);background:#ffffff;color:#315c43;font-size:26px;box-shadow:0 8px 24px #0002}
+.settings{position:fixed;inset:0;background:#0006;display:none;align-items:flex-end;z-index:25}.settings.show{display:flex}.settings .sheet{padding-bottom:34px}
+.empty{text-align:center;color:var(--muted);padding:40px 10px}.badge{font-size:12px;background:#244c39;padding:2px 6px;border-radius:999px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><div class="logo"><img src="icon-192.png"></div><div><h1>SmartHandle</h1><div class="sub">Bestand • Fehlt • Einkaufsliste</div></div></header>
+<input id="search" class="search" placeholder="Artikel suchen …"><div style="margin:10px 0 4px"><button id="addTopBtn" class="btn gold" style="width:100%;font-size:17px;padding:13px">+ Artikel hinzufügen</button></div>
+<div class="tabs">
+<button class="tab active" data-tab="stock">Bestand <span id="c1" class="badge">0</span></button>
+<button class="tab" data-tab="missing">Fehlt <span id="c2" class="badge">0</span></button>
+<button class="tab" data-tab="shopping">Einkauf <span id="c3" class="badge">0</span></button>
+</div>
+<div id="list"></div>
+</div>
+<button id="addBtn" class="fab">+</button>
+
+<button id="gearBtn" class="gear" aria-label="Einstellungen">⚙️</button>
+
+<div class="settings" id="settingsModal"><div class="sheet">
+<h2>Einstellungen</h2>
+<div class="controls">
+<button class="btn" id="shareBtn">Liste teilen</button>
+<button class="btn" id="backupBtn">Backup</button>
+<button class="btn" id="importBtn">Import</button>
+</div>
+<div class="controls" style="margin-top:14px">
+<button class="btn gold" id="settingsClose" style="flex:1">Fertig</button>
+</div>
+</div></div>
+
+<div class="modal" id="modal"><div class="sheet">
+<h2 id="formTitle">Artikel hinzufügen</h2>
+<input type="hidden" id="editId">
+<label>Bild</label><input id="photo" type="file" accept="image/*" capture="environment"><img id="preview" class="preview" style="display:none">
+<label>Artikelname</label><input id="name" placeholder="z. B. Milch">
+<label>Kategorie</label><select id="category"><option>Kühlschrank</option><option>Gefrierschrank</option><option>Vorrat</option><option>Getränke</option><option>Bad</option><option>Haushalt</option><option>Sonstiges</option></select>
+<div class="grid2"><div><label>Bestand</label><input id="stock" type="number" min="0" value="0"></div><div><label>Sollbestand</label><input id="target" type="number" min="0" value="1"></div></div>
+<label>Notiz</label><textarea id="note" rows="3"></textarea>
+<div class="controls"><button id="saveBtn" class="btn gold">Speichern</button><button id="cancelBtn" class="btn">Abbrechen</button></div>
+</div></div>
+<input id="restoreInput" type="file" accept=".json,application/json" hidden>
+
+<script>
+const KEY="smarthandle-v1";let items=JSON.parse(localStorage.getItem(KEY)||"[]");let tab="stock";let photoData="";
+const $=s=>document.querySelector(s);
+const buy=i=>Math.max(0,(+i.target||0)-(+i.stock||0));
+function esc(s=""){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function save(){localStorage.setItem(KEY,JSON.stringify(items));render()}
+function render(){
+ $("#c1").textContent=items.length;$("#c2").textContent=items.filter(i=>buy(i)>0).length;$("#c3").textContent=items.filter(i=>buy(i)>0&&!i.bought).length;
+ const q=$("#search").value.trim().toLowerCase();
+ let data=items.filter(i=>(!q||(`${i.name} ${i.category} ${i.note||""}`).toLowerCase().includes(q))&&(tab==="stock"||tab==="missing"&&buy(i)>0||tab==="shopping"&&buy(i)>0&&!i.bought));
+ $("#list").innerHTML=data.length?data.map(i=>`<div class="card"><div class="row"><img class="pic" src="${i.photo||'icon-192.png'}"><div class="grow"><div class="name">${esc(i.name)}</div><div class="meta">${esc(i.category)} · Bestand ${i.stock} / Soll ${i.target}</div>${buy(i)>0?`<div class="buy">Kaufen: ${buy(i)}</div>`:'<div class="meta">Genug vorhanden</div>'}${i.note?`<div class="meta">${esc(i.note)}</div>`:''}</div></div><div class="controls"><button class="btn" onclick="chg('${i.id}',-1)">−1</button><button class="btn" onclick="chg('${i.id}',1)">+1</button>${buy(i)>0?`<button class="btn gold" onclick="done('${i.id}')">${i.bought?'Erledigt ✓':'Gekauft'}</button>`:''}<button class="btn" onclick="edit('${i.id}')">Bearbeiten</button><button class="btn red" onclick="del('${i.id}')">Löschen</button></div></div>`).join(""):'<div class="empty">Noch nichts hier.</div>'
+}
+function chg(id,d){let i=items.find(x=>x.id===id);i.stock=Math.max(0,(+i.stock||0)+d);if(buy(i)===0)i.bought=false;save()}
+function done(id){let i=items.find(x=>x.id===id);i.bought=!i.bought;save()}
+function del(id){if(confirm("Artikel löschen?")){items=items.filter(x=>x.id!==id);save()}}
+function openForm(i){$("#formTitle").textContent=i?"Artikel bearbeiten":"Artikel hinzufügen";$("#editId").value=(i&&i.id)||"";$("#name").value=(i&&i.name)||"";$("#category").value=(i&&i.category)||"Kühlschrank";$("#stock").value=(i&&i.stock!=null)?i.stock:0;$("#target").value=(i&&i.target!=null)?i.target:1;$("#note").value=(i&&i.note)||"";photoData=(i&&i.photo)||"";$("#preview").src=photoData;$("#preview").style.display=photoData?"block":"none";$("#photo").value="";$("#modal").classList.add("show")}
+function edit(id){openForm(items.find(x=>x.id===id))}
+function makeId(){return "i-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,9)}
+$("#addBtn").onclick=()=>openForm(null);
+$("#addTopBtn").onclick=()=>openForm(null);
+$("#cancelBtn").onclick=()=>$("#modal").classList.remove("show");
+$("#photo").onchange=e=>{let f=(e.target.files&&e.target.files[0]);if(!f)return;let r=new FileReader();r.onload=()=>{photoData=r.result;$("#preview").src=photoData;$("#preview").style.display="block"};r.readAsDataURL(f)};
+$("#saveBtn").onclick=()=>{let n=$("#name").value.trim();if(!n)return alert("Artikelname fehlt.");let obj={id:$("#editId").value||makeId(),name:n,category:$("#category").value,stock:+$("#stock").value||0,target:+$("#target").value||0,note:$("#note").value.trim(),photo:photoData,bought:false};let x=items.findIndex(i=>i.id===obj.id);if(x>=0)items[x]={...items[x],...obj};else items.unshift(obj);$("#modal").classList.remove("show");save()};
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");tab=b.dataset.tab;render()});
+$("#search").oninput=render;
+$("#shareBtn").onclick=async()=>{let d=items.filter(i=>buy(i)>0&&!i.bought);let t="SmartHandle Einkaufsliste\n\n"+(d.length?d.map(i=>`• ${i.name}: ${buy(i)} kaufen`).join("\n"):"Nichts zu kaufen.");if(navigator.share){try{await navigator.share({title:"SmartHandle Einkaufsliste",text:t})}catch(e){}}else{await navigator.clipboard.writeText(t);alert("Liste kopiert.")}};
+$("#backupBtn").onclick=()=>{let b=new Blob([JSON.stringify(items,null,2)],{type:"application/json"});let a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="SmartHandle-Backup.json";a.click()};
+$("#importBtn").onclick=()=>$("#restoreInput").click();$("#restoreInput").onchange=e=>{let f=(e.target.files&&e.target.files[0]);if(!f)return;let r=new FileReader();r.onload=()=>{try{let d=JSON.parse(r.result);if(Array.isArray(d)){items=d;save();alert("Importiert.")}}catch{alert("Ungültige Datei.")}};r.readAsText(f)};
+$("#gearBtn").onclick=()=>$("#settingsModal").classList.add("show");
+$("#settingsClose").onclick=()=>$("#settingsModal").classList.remove("show");
+$("#settingsModal").onclick=e=>{if(e.target===$("#settingsModal"))$("#settingsModal").classList.remove("show")};
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js");render();
+</script>
+</body></html>
