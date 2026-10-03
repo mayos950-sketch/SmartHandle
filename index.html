@@ -80,16 +80,28 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 .cameraActions{display:flex;gap:10px;margin-top:10px}
 .cameraActions button{flex:1}
 
+
+.scanBtn{width:100%;border:0;border-radius:18px;padding:14px 16px;font-size:18px;font-weight:900;background:#dff3ff;color:#214d6b;box-shadow:0 7px 20px rgba(80,145,190,.12);margin:10px 0}
+.scanModal{position:fixed;inset:0;background:#000c;display:none;align-items:center;justify-content:center;z-index:95;padding:14px}
+.scanModal.show{display:flex}
+.scanPanel{width:min(720px,100%);background:#fff;border-radius:22px;padding:14px}
+.scanPanel video{width:100%;max-height:62vh;background:#000;border-radius:16px;object-fit:cover}
+.scanStatus{font-size:13px;color:#6b879b;text-align:center;margin:8px 0}
+.priceBox{background:#eef8ff;border:1px solid #d7e9f6;border-radius:16px;padding:10px;margin-top:10px}
+.priceRow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #dcecf7}
+.priceRow:last-child{border-bottom:0}
+.apiKeyBox{margin-top:12px}
+
 </style>
 </head>
-<body><div class="versionMark">v18</div>
+<body><div class="versionMark">v19</div>
 <div class="wrap">
 <header><div class="logo"><img src="icon-192.png"></div><div><h1>SmartHandle</h1><div class="sub">Bestand • Fehlt • Einkaufsliste</div></div></header>
 <input id="search" class="search" placeholder="Artikel suchen …">
 <div class="quick">
   <input id="quickName" placeholder="Schnell hinzufügen …">
   <button id="quickAdd" class="btn gold" style="font-size:28px" aria-label="Hinzufügen">＋</button>
-</div>
+</div><button id="scanProductBtn" class="scanBtn">📷 Barcode scannen</button>
 <div class="homeCats" id="homeCats">
   <button type="button" class="homeCat active" data-homecat="" aria-label="Alle">🏠<span>Alle</span></button>
   <button type="button" class="homeCat" data-homecat="Kühlschrank" aria-label="Kühlschrank">🧊<span>Kühlschrank</span></button>
@@ -124,7 +136,7 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 <h2>Einstellungen</h2>
 <div class="controls">
 
-<button class="btn" id="backupBtn">Backup</button>
+<button class="btn" id="backupBtn">Backup</button><div class="apiKeyBox" style="width:100%"><label>Kassalapp API-Key</label><input id="kassalKey" type="password" placeholder="API-Key hier einfügen"><div class="meta" style="margin-top:5px">Wird nur auf diesem Gerät gespeichert.</div></div>
 <button class="btn" id="importBtn">Import</button><button class="btn" id="resetBoughtBtn" aria-label="Einkauf zurücksetzen">↺</button>
 </div>
 <div class="controls" style="margin-top:14px">
@@ -168,6 +180,19 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
   </div>
 </div>
 
+
+<div id="scanModal" class="scanModal">
+  <div class="scanPanel">
+    <h2 style="margin-top:0">Barcode scannen</h2>
+    <video id="scanVideo" autoplay playsinline muted></video>
+    <div id="scanStatus" class="scanStatus">Kamera wird gestartet …</div>
+    <div class="controls">
+      <button id="manualEanBtn" class="btn">EAN eingeben</button>
+      <button id="closeScanBtn" class="btn">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 async function clearOldAppCache(){
@@ -184,7 +209,7 @@ async function clearOldAppCache(){
 }
 clearOldAppCache();
 
-const KEY="smarthandle-v3";const EXTRA_KEY="smarthandle-extras-v1";let items=JSON.parse(localStorage.getItem(KEY)||localStorage.getItem("smarthandle-v2")||localStorage.getItem("smarthandle-v1")||"[]");let extras=JSON.parse(localStorage.getItem(EXTRA_KEY)||"[]");let tab="stock";let photoData="";let homeCat="";let photoTargetId="";
+const KEY="smarthandle-v3";const EXTRA_KEY="smarthandle-extras-v1";const KASSAL_KEY="smarthandle-kassal-key";let items=JSON.parse(localStorage.getItem(KEY)||localStorage.getItem("smarthandle-v2")||localStorage.getItem("smarthandle-v1")||"[]");let extras=JSON.parse(localStorage.getItem(EXTRA_KEY)||"[]");let tab="stock";let photoData="";let homeCat="";let photoTargetId="";
 const $=s=>document.querySelector(s);
 const buy=i=>Math.max(0,(+i.target||0)-(+i.stock||0));
 const CAT_ICON={
@@ -225,6 +250,112 @@ function photoDataFromFile(f, cb){
   };
   r.readAsDataURL(f);
 }
+
+let scanStream=null, scanLoop=null;
+
+function getKassalKey(){
+  return localStorage.getItem(KASSAL_KEY)||"";
+}
+
+async function lookupKassalByEan(ean){
+  const key=getKassalKey();
+  if(!key){
+    alert("Bitte zuerst im Zahnrad den Kassalapp API-Key eintragen.");
+    $("#settingsModal").classList.add("show");
+    return;
+  }
+  $("#scanStatus").textContent="Produkt wird gesucht …";
+  try{
+    const r=await fetch("https://kassal.app/api/v1/products/ean/"+encodeURIComponent(ean),{
+      headers:{"Authorization":"Bearer "+key,"Accept":"application/json"}
+    });
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    const products=(j && j.data && j.data.products)||[];
+    if(!products.length){
+      alert("Kein Produkt zu diesem Barcode gefunden.");
+      return;
+    }
+
+    const valid=products.filter(p=>p && p.name);
+    const cheapest=valid
+      .filter(p=>p.current_price && typeof p.current_price.price==="number")
+      .sort((a,b)=>a.current_price.price-b.current_price.price)[0] || valid[0];
+
+    closeScanner();
+    openForm();
+
+    $("#name").value=cheapest.name||"";
+    photoData=cheapest.image||"";
+    if(photoData){
+      $("#preview").src=photoData;
+      $("#preview").style.display="block";
+    }
+
+    const priceLines=valid
+      .filter(p=>p.store && p.current_price && typeof p.current_price.price==="number")
+      .sort((a,b)=>a.current_price.price-b.current_price.price)
+      .slice(0,6)
+      .map(p=>`${p.store.name}: ${Number(p.current_price.price).toFixed(2)} kr`);
+
+    $("#note").value=[
+      "EAN: "+ean,
+      priceLines.length ? "Preise:\\n"+priceLines.join("\\n") : ""
+    ].filter(Boolean).join("\\n");
+  }catch(e){
+    alert("Kassalapp-Abfrage fehlgeschlagen: "+e.message);
+  }
+}
+
+async function openScanner(){
+  const key=getKassalKey();
+  if(!key){
+    alert("Bitte zuerst den Kassalapp API-Key im Zahnrad eintragen.");
+    $("#settingsModal").classList.add("show");
+    return;
+  }
+  $("#scanModal").classList.add("show");
+  $("#scanStatus").textContent="Kamera wird gestartet …";
+
+  try{
+    scanStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:"environment"}},audio:false
+    });
+    $("#scanVideo").srcObject=scanStream;
+
+    if("BarcodeDetector" in window){
+      const detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
+      $("#scanStatus").textContent="Barcode vor die Kamera halten";
+      const tick=async()=>{
+        if(!scanStream)return;
+        try{
+          const codes=await detector.detect($("#scanVideo"));
+          if(codes && codes.length){
+            const value=codes[0].rawValue;
+            if(value){
+              await lookupKassalByEan(value);
+              return;
+            }
+          }
+        }catch(e){}
+        scanLoop=requestAnimationFrame(tick);
+      };
+      scanLoop=requestAnimationFrame(tick);
+    }else{
+      $("#scanStatus").textContent="Automatisches Scannen wird hier nicht unterstützt. EAN bitte eingeben.";
+    }
+  }catch(e){
+    $("#scanStatus").textContent="Kamera konnte nicht geöffnet werden.";
+  }
+}
+
+function closeScanner(){
+  $("#scanModal").classList.remove("show");
+  if(scanLoop){cancelAnimationFrame(scanLoop);scanLoop=null;}
+  if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
+  $("#scanVideo").srcObject=null;
+}
+
 function render(){
  const missing=items.filter(i=>buy(i)>0);
  const shopping=items.filter(i=>buy(i)>0&&!i.bought);
@@ -318,9 +449,22 @@ document.getElementById("catGrid").addEventListener("click",e=>{
   e.preventDefault();
   setCategory(b.dataset.cat);
 });
-$("#gearBtn").onclick=()=>$("#settingsModal").classList.add("show");
-$("#settingsClose").onclick=()=>$("#settingsModal").classList.remove("show");
+$("#gearBtn").onclick=()=>{$("#kassalKey").value=getKassalKey();$("#settingsModal").classList.add("show")};
+$("#kassalKey").addEventListener("change",()=>localStorage.setItem(KASSAL_KEY,$("#kassalKey").value.trim()));
+$("#settingsClose").onclick=()=>{localStorage.setItem(KASSAL_KEY,$("#kassalKey").value.trim());$("#settingsModal").classList.remove("show")};
 $("#settingsModal").onclick=e=>{if(e.target===$("#settingsModal"))$("#settingsModal").classList.remove("show")};
+
+$("#scanProductBtn").onclick=openScanner;
+$("#closeScanBtn").onclick=closeScanner;
+$("#manualEanBtn").onclick=async()=>{
+  const ean=prompt("EAN / Barcode eingeben:");
+  if(ean && /^\d{8,14}$/.test(ean.trim())){
+    await lookupKassalByEan(ean.trim());
+  }else if(ean){
+    alert("Ungültiger Barcode.");
+  }
+};
+
 setCategory("Kühlschrank");
 render();
 </script>
