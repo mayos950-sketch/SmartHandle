@@ -70,11 +70,19 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 
 .sendBar{display:none;margin:12px 0}
 .sendBar.show{display:block}
-.sendBtn{width:100%;border:0;border-radius:18px;padding:15px 16px;font-size:18px;font-weight:800;background:#bfe6ff;color:#365b78;box-shadow:0 7px 20px rgba(115,157,190,.12)}
+.sendBtn{width:100%;border:0;border-radius:18px;padding:16px 16px;font-size:19px;font-weight:900;background:#9ed8ff;color:#214d6b;box-shadow:0 8px 22px rgba(80,145,190,.20);cursor:pointer}
+
+
+.cameraModal{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:80;padding:16px}
+.cameraModal.show{display:flex}
+.cameraPanel{width:min(720px,100%);background:#fff;border-radius:22px;padding:14px}
+.cameraPanel video{width:100%;max-height:65vh;background:#000;border-radius:16px;object-fit:cover}
+.cameraActions{display:flex;gap:10px;margin-top:10px}
+.cameraActions button{flex:1}
 
 </style>
 </head>
-<body><div class="versionMark">v14</div>
+<body><div class="versionMark">v16</div>
 <div class="wrap">
 <header><div class="logo"><img src="icon-192.png"></div><div><h1>SmartHandle</h1><div class="sub">Bestand • Fehlt • Einkaufsliste</div></div></header>
 <input id="search" class="search" placeholder="Artikel suchen …">
@@ -99,7 +107,7 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 </div>
 <div style="margin:10px 0 4px"><button id="addTopBtn" class="btn gold" style="width:100%;font-size:30px;padding:10px" aria-label="Artikel hinzufügen">＋</button></div>
 <div id="extraBox" class="extraBox" style="display:none"><div class="extraTitle">Zusätzlich kaufen</div><div class="extraInput"><input id="extraName" placeholder="z. B. Blumen, Batterien …"><button id="extraAdd" class="btn gold" aria-label="Extra hinzufügen">＋</button></div><div id="extraList" class="extraList"></div></div>
-<div id="sendBar" class="sendBar"><button id="sendDirectBtn" class="sendBtn">📤 Liste an Mario senden</button></div>
+<div id="sendBar" class="sendBar show"><button id="sendDirectBtn" class="sendBtn">📤 Einkaufszettel senden</button><div class="meta" style="text-align:center;margin-top:6px">Fehlende Artikel + Extras werden zusammen geteilt</div></div>
 <div class="tabs">
 <button class="tab active" data-tab="stock">Bestand <span id="c1" class="badge">0</span></button>
 <button class="tab" data-tab="missing">Fehlt <span id="c2" class="badge">0</span></button>
@@ -147,6 +155,18 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 <input id="restoreInput" type="file" accept=".json,application/json" hidden>
 <input id="inlinePhotoInput" type="file" accept="image/*" capture="environment" hidden>
 <input id="quickCameraInput" type="file" accept="image/*" capture="environment" hidden>
+
+
+<div id="cameraModal" class="cameraModal">
+  <div class="cameraPanel">
+    <video id="cameraVideo" autoplay playsinline muted></video>
+    <canvas id="cameraCanvas" style="display:none"></canvas>
+    <div class="cameraActions">
+      <button id="takePhotoBtn" class="btn gold">📸 Aufnehmen</button>
+      <button id="closeCameraBtn" class="btn">Abbrechen</button>
+    </div>
+  </div>
+</div>
 
 <script>
 
@@ -211,7 +231,7 @@ function render(){
  $("#c1").textContent=items.length;$("#c2").textContent=missing.length;$("#c3").textContent=shopping.length;
  $("#sAll").textContent=items.length;$("#sMissing").textContent=missing.length;$("#sBuy").textContent=shopping.length + extras.length;
  renderExtras();
- $("#sendBar").classList.toggle("show", tab==="missing" || tab==="shopping");
+ $("#sendBar").classList.add("show");
  const q=$("#search").value.trim().toLowerCase();
  let data=items.filter(i=>(!q||(`${i.name} ${i.category} ${i.note||""}`).toLowerCase().includes(q))&&(!homeCat||i.category===homeCat)&&(tab==="stock"||tab==="missing"&&buy(i)>0||tab==="shopping"&&buy(i)>0&&!i.bought));
  data.sort((a,b)=>(a.category||"").localeCompare(b.category||"")||(a.name||"").localeCompare(b.name||""));
@@ -230,6 +250,7 @@ $("#cancelBtn").onclick=()=>$("#modal").classList.remove("show");
 $("#cameraBtn").onclick=()=>$("#photo").click();
 $("#cameraQuick").onclick=()=>{
   openForm();
+  setTimeout(openRealCamera,120);
 };
 $("#photo").onchange=e=>{
  let f=(e.target.files&&e.target.files[0]);if(!f)return;
