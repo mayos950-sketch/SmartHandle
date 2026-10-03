@@ -1,0 +1,1 @@
+SmartHandle PWA\nGitHub Pages aktivieren, Link in Safari öffnen, Teilen → Zum Home-Bildschirm.
