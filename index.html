@@ -30,14 +30,14 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 .badge{font-size:12px;background:#d9ecfb;color:#53799a;padding:2px 6px;border-radius:999px}
 .catGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
 .catBtn{border:1px solid #d7e9f6;background:#eef8ff;border-radius:16px;padding:12px 8px;display:flex;align-items:center;justify-content:center;min-height:58px;font-size:26px;cursor:pointer}
-.catBtn.active{background:var(--gold);box-shadow:0 4px 14px rgba(115,157,190,.16)}
+.catBtn.active{background:#bfe6ff;box-shadow:0 4px 14px rgba(115,157,190,.16);outline:2px solid #8bcdf5}
 .catInline{font-size:24px;line-height:1}
 @media (max-width:480px){.catGrid{grid-template-columns:repeat(4,1fr)} .catBtn{min-height:54px;font-size:24px}}
 
 
 .homeCats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0 16px}
 .homeCat{border:1px solid #d4e7f5;background:#fff;border-radius:22px;min-height:98px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:40px;box-shadow:0 7px 20px rgba(115,157,190,.10);transition:.15s}.homeCat span{font-size:11px;font-weight:700;color:#6b879b;line-height:1.1}
-.homeCat.active{background:#dff3ff;transform:translateY(-2px);box-shadow:0 9px 24px rgba(115,157,190,.16)}
+.homeCat.active{background:#bfe6ff;transform:translateY(-2px);box-shadow:0 9px 24px rgba(115,157,190,.20);outline:2px solid #8bcdf5}
 .catBtn{min-height:82px!important;font-size:34px!important;border-radius:20px!important;flex-direction:column;gap:3px}.catBtn span{font-size:10px;font-weight:700;color:#6b879b;line-height:1.1}
 .quick{display:grid;grid-template-columns:1fr 56px;gap:8px;margin:10px 0}
 .quick input{margin:0}
@@ -82,7 +82,7 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 
 </style>
 </head>
-<body><div class="versionMark">v16</div>
+<body><div class="versionMark">v17</div>
 <div class="wrap">
 <header><div class="logo"><img src="icon-192.png"></div><div><h1>SmartHandle</h1><div class="sub">Bestand • Fehlt • Einkaufsliste</div></div></header>
 <input id="search" class="search" placeholder="Artikel suchen …">
@@ -91,15 +91,15 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
   <button id="quickAdd" class="btn gold" style="font-size:28px" aria-label="Hinzufügen">＋</button>
 </div>
 <div class="homeCats" id="homeCats">
-  <button class="homeCat active" data-homecat="" aria-label="Alle">🏠<span>Alle</span></button>
-  <button class="homeCat" data-homecat="Kühlschrank" aria-label="Kühlschrank">🧊<span>Kühlschrank</span></button>
-  <button class="homeCat" data-homecat="Gefrierschrank" aria-label="Gefrierschrank">❄️<span>Gefrierfach</span></button>
-  <button class="homeCat" data-homecat="Vorrat" aria-label="Vorrat">🥫<span>Vorrat</span></button>
-  <button class="homeCat" data-homecat="Getränke" aria-label="Getränke">🥤<span>Getränke</span></button>
-  <button class="homeCat" data-homecat="Bad" aria-label="Bad">🧴<span>Bad</span></button>
-  <button class="homeCat" data-homecat="Haushalt" aria-label="Haushalt">🧽<span>Haushalt</span></button>
-  <button class="homeCat" data-homecat="Sonstiges" aria-label="Sonstiges">📦<span>Sonstiges</span></button>
-</div>
+  <button type="button" class="homeCat active" data-homecat="" aria-label="Alle">🏠<span>Alle</span></button>
+  <button type="button" class="homeCat" data-homecat="Kühlschrank" aria-label="Kühlschrank">🧊<span>Kühlschrank</span></button>
+  <button type="button" class="homeCat" data-homecat="Gefrierschrank" aria-label="Gefrierschrank">❄️<span>Gefrierfach</span></button>
+  <button type="button" class="homeCat" data-homecat="Vorrat" aria-label="Vorrat">🥫<span>Vorrat</span></button>
+  <button type="button" class="homeCat" data-homecat="Getränke" aria-label="Getränke">🥤<span>Getränke</span></button>
+  <button type="button" class="homeCat" data-homecat="Bad" aria-label="Bad">🧴<span>Bad</span></button>
+  <button type="button" class="homeCat" data-homecat="Haushalt" aria-label="Haushalt">🧽<span>Haushalt</span></button>
+  <button type="button" class="homeCat" data-homecat="Sonstiges" aria-label="Sonstiges">📦<span>Sonstiges</span></button>
+</div><div class="meta" style="text-align:center;margin:-8px 0 8px">Kategorie antippen zum Wechseln</div>
 <div class="miniStat">
   <div class="stat"><strong id="sAll">0</strong><span>Artikel</span></div>
   <div class="stat"><strong id="sMissing">0</strong><span>Fehlt</span></div>
@@ -279,12 +279,22 @@ $("#quickAdd").onclick=()=>{
 $("#quickName").addEventListener("keydown",e=>{if(e.key==="Enter")$("#quickAdd").click()});
 $("#extraAdd").onclick=()=>{let n=$("#extraName").value.trim(); if(!n)return; extras.push(n); $("#extraName").value=""; save();};
 $("#extraName").addEventListener("keydown",e=>{if(e.key==="Enter")$("#extraAdd").click()});
-document.querySelectorAll(".homeCat").forEach(b=>b.onclick=()=>{
- document.querySelectorAll(".homeCat").forEach(x=>x.classList.remove("active"));
- b.classList.add("active");homeCat=b.dataset.homecat||"";render();
+document.getElementById("homeCats").addEventListener("click",e=>{
+  const b=e.target.closest(".homeCat");
+  if(!b)return;
+  e.preventDefault();
+  document.querySelectorAll(".homeCat").forEach(x=>x.classList.remove("active"));
+  b.classList.add("active");
+  homeCat=b.dataset.homecat||"";
+  render();
 });
 $("#resetBoughtBtn").onclick=()=>{items.forEach(i=>i.bought=false);save();$("#settingsModal").classList.remove("show")};
-document.querySelectorAll(".catBtn").forEach(b=>b.onclick=()=>setCategory(b.dataset.cat));
+document.getElementById("catGrid").addEventListener("click",e=>{
+  const b=e.target.closest(".catBtn");
+  if(!b)return;
+  e.preventDefault();
+  setCategory(b.dataset.cat);
+});
 $("#gearBtn").onclick=()=>$("#settingsModal").classList.add("show");
 $("#settingsClose").onclick=()=>$("#settingsModal").classList.remove("show");
 $("#settingsModal").onclick=e=>{if(e.target===$("#settingsModal"))$("#settingsModal").classList.remove("show")};
