@@ -74,7 +74,7 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 
 </style>
 </head>
-<body><div class="versionMark">v13</div>
+<body><div class="versionMark">v14</div>
 <div class="wrap">
 <header><div class="logo"><img src="icon-192.png"></div><div><h1>SmartHandle</h1><div class="sub">Bestand • Fehlt • Einkaufsliste</div></div></header>
 <input id="search" class="search" placeholder="Artikel suchen …">
@@ -99,7 +99,7 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 </div>
 <div style="margin:10px 0 4px"><button id="addTopBtn" class="btn gold" style="width:100%;font-size:30px;padding:10px" aria-label="Artikel hinzufügen">＋</button></div>
 <div id="extraBox" class="extraBox" style="display:none"><div class="extraTitle">Zusätzlich kaufen</div><div class="extraInput"><input id="extraName" placeholder="z. B. Blumen, Batterien …"><button id="extraAdd" class="btn gold" aria-label="Extra hinzufügen">＋</button></div><div id="extraList" class="extraList"></div></div>
-<div id="sendBar" class="sendBar"><button id="sendDirectBtn" class="sendBtn">📤 Einkaufszettel senden</button></div>
+<div id="sendBar" class="sendBar"><button id="sendDirectBtn" class="sendBtn">📤 Liste an Mario senden</button></div>
 <div class="tabs">
 <button class="tab active" data-tab="stock">Bestand <span id="c1" class="badge">0</span></button>
 <button class="tab" data-tab="missing">Fehlt <span id="c2" class="badge">0</span></button>
@@ -127,7 +127,7 @@ label{display:block;color:var(--muted);font-size:13px;margin:12px 0 6px}input,se
 <div class="modal" id="modal"><div class="sheet">
 <h2 id="formTitle">Artikel hinzufügen</h2>
 <input type="hidden" id="editId">
-<label class="camBtn">Bild <button type="button" class="btn" id="cameraBtn">📷 Foto</button></label><input id="photo" type="file" accept="image/*" capture="environment" style="display:none"><img id="preview" class="preview" style="display:none">
+<label>Bild</label><div class="controls"><button type="button" class="btn gold" id="cameraBtn">📷 Foto machen</button><button type="button" class="btn" id="galleryBtn">🖼️ Foto wählen</button></div><input id="photo" type="file" accept="image/*" capture="environment" style="display:none"><input id="galleryPhoto" type="file" accept="image/*" style="display:none"><img id="preview" class="preview" style="display:none">
 <label>Artikelname</label><input id="name" placeholder="z. B. Milch">
 <label>Kategorie</label>
 <input type="hidden" id="category" value="Kühlschrank">
@@ -211,7 +211,7 @@ function render(){
  $("#c1").textContent=items.length;$("#c2").textContent=missing.length;$("#c3").textContent=shopping.length;
  $("#sAll").textContent=items.length;$("#sMissing").textContent=missing.length;$("#sBuy").textContent=shopping.length + extras.length;
  renderExtras();
- $("#sendBar").classList.toggle("show", tab==="shopping");
+ $("#sendBar").classList.toggle("show", tab==="missing" || tab==="shopping");
  const q=$("#search").value.trim().toLowerCase();
  let data=items.filter(i=>(!q||(`${i.name} ${i.category} ${i.note||""}`).toLowerCase().includes(q))&&(!homeCat||i.category===homeCat)&&(tab==="stock"||tab==="missing"&&buy(i)>0||tab==="shopping"&&buy(i)>0&&!i.bought));
  data.sort((a,b)=>(a.category||"").localeCompare(b.category||"")||(a.name||"").localeCompare(b.name||""));
@@ -230,7 +230,6 @@ $("#cancelBtn").onclick=()=>$("#modal").classList.remove("show");
 $("#cameraBtn").onclick=()=>$("#photo").click();
 $("#cameraQuick").onclick=()=>{
   openForm();
-  setTimeout(()=>$("#photo").click(),100);
 };
 $("#photo").onchange=e=>{
  let f=(e.target.files&&e.target.files[0]);if(!f)return;
